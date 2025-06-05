@@ -24,14 +24,14 @@ const CartIcon = ({ className }) => (
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logout, isAdmin } = useAuth();   // isAdmin যোগ করা হলো
-  const { cartItems } = useCart();
+  const { user, logout, isAdmin } = useAuth();
+  const { cartItems, cartLoading } = useCart();
   const navigate = useNavigate();
   const userMenuRef = useRef();
 
-  const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+  // যতক্ষণ cartLoading=true, ততক্ষণ ব্যাজ দেখাবেনা; loaded হলে যোগফল দেখাবে
+  const totalItems = cartLoading ? 0 : cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // সাধারন লিঙ্কগুলো
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Shop', path: '/shop' },
@@ -43,7 +43,8 @@ const Navbar = () => {
           <span className="transition-colors duration-300 group-hover:text-black text-gray-600 font-medium">
             Cart
           </span>
-          {totalItems > 0 && (
+          {/** cartLoading থাকলে কোনো ব্যাজ দেখাবেনা **/}
+          {!cartLoading && totalItems > 0 && (
             <span className="absolute -top-2 -right-4 bg-red-600 text-white rounded-full text-sm w-6 h-6 flex items-center justify-center font-semibold shadow-lg">
               {totalItems}
             </span>
@@ -53,12 +54,10 @@ const Navbar = () => {
       path: '/cart',
     },
     // যদি isAdmin=true, তাহলে “Admin Panel” লিঙ্ক দেখানো হবে
-    ...(isAdmin
-      ? [{ name: 'Admin Panel', path: '/admin/products' }]
-      : []),
+    ...(isAdmin ? [{ name: 'Admin Panel', path: '/admin/products' }] : []),
   ];
 
-  // Outside click হলে user menu বন্ধ
+  // বাইরের ক্লিক হলে user menu বন্ধ হবে
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -75,6 +74,8 @@ const Navbar = () => {
     try {
       await logout();
       setUserMenuOpen(false);
+      // লগআউটের পর Navbar কে আপডেট রাখতে চাইলে ইচ্ছামতো navigate দিতে পারেন
+      navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -85,7 +86,9 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center relative">
         <Link to="/" className="flex items-center gap-2">
           <img src="/chronova-logo.svg" alt="Logo" className="w-10 h-10" />
-          <span className="text-2xl font-bold text-gray-800 tracking-wider">Chronova</span>
+          <span className="text-2xl font-bold text-gray-800 tracking-wider">
+            Chronova
+          </span>
         </Link>
 
         {/* Desktop Nav */}
@@ -140,10 +143,16 @@ const Navbar = () => {
             </div>
           ) : (
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-blue-600 text-sm font-medium hover:underline">
+              <Link
+                to="/login"
+                className="text-blue-600 text-sm font-medium hover:underline"
+              >
                 Login
               </Link>
-              <Link to="/register" className="text-sm text-gray-600 font-medium hover:underline">
+              <Link
+                to="/register"
+                className="text-sm text-gray-600 font-medium hover:underline"
+              >
                 Register
               </Link>
             </div>

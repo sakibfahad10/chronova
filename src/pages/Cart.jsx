@@ -1,14 +1,15 @@
-import React, { useContext } from 'react';
+// src/pages/Cart.jsx
+import React from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
 const Cart = () => {
-  const {
-    cartItems,
-    removeItem,
-    updateQuantity,
-  } = useCart();
+  const { cartItems, removeItem, updateQuantity, cartLoading } = useCart();
+
+  if (cartLoading) {
+    return <p className="text-center mt-20">Loading cart…</p>;
+  }
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,

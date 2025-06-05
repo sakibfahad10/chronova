@@ -1,6 +1,13 @@
 // src/context/CartContext.jsx
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useState,
+  useRef,
+} from 'react';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { db } from '../firebase';
@@ -9,7 +16,9 @@ export const CartContext = createContext();
 
 const CART_STORAGE_KEY = 'chronova_cart';
 
-// —————— Helpers for LocalStorage ——————
+// ——————————————
+// Helper Functions
+// ——————————————
 
 const getLocalCart = () => {
   try {
@@ -29,25 +38,25 @@ const saveLocalCart = (cart) => {
   }
 };
 
-// —————— Merge two carts (remote + local) by Id and sum quantities ——————
-
+// Merge local + remote WITHOUT duplicating quantities
 const mergeCarts = (localCart, remoteCart) => {
-  const map = new Map();
-  ;[...remoteCart, ...localCart].forEach((item) => {
-    const existing = map.get(item.Id);
-    if (existing) {
-      map.set(item.Id, {
-        ...item,
-        quantity: existing.quantity + item.quantity,
-      });
-    } else {
-      map.set(item.Id, { ...item });
+  const remoteMap = new Map();
+  remoteCart.forEach((item) => {
+    remoteMap.set(item.Id, { ...item });
+  });
+
+  const merged = [...remoteCart];
+  localCart.forEach((item) => {
+    if (!remoteMap.has(item.Id)) {
+      merged.push({ ...item });
     }
   });
-  return Array.from(map.values());
+  return merged;
 };
 
-// —————— Reducer to manage cart state locally ——————
+// ——————————————
+// Reducer
+// ——————————————
 
 const cartReducer = (state, action) => {
   switch (action.type) {
@@ -85,48 +94,71 @@ const cartReducer = (state, action) => {
   }
 };
 
-// —————— CartProvider & Context ——————
-
 export const CartProvider = ({ children }) => {
-  const { user, loading } = useAuth(); // Now also pulling loading
+  const { user, loading: authLoading } = useAuth();
   const [cartItems, dispatch] = useReducer(cartReducer, []);
+  const [cartLoading, setCartLoading] = useState(true);
 
+  // এই রেফ ফ্ল্যাগ ইঙ্গিত দেবে initial load সম্পন্ন হয়েছে কিনা
+  const initialLoadDone = useRef(false);
+
+  // ——————————————
+  // 1) Auth state পরিবর্তন হলে বা লোডিং শেষ হলে কার্ট লোডিং
+  // ——————————————
   useEffect(() => {
-    // Don’t run until Auth is initialized
-    if (loading) return;
+    // প্রত্যেকবার authState পরিবর্তনের শুরুতেই রিসেট
+    initialLoadDone.current = false;
+
+    if (authLoading) return;
 
     let unsubscribe = null;
 
     const loadLocal = () => {
       const local = getLocalCart();
       dispatch({ type: 'INITIALIZE', payload: local });
+      setCartLoading(false);
+      initialLoadDone.current = true; // initial load শেষ
     };
 
     const loadRemote = async (uid) => {
-      const cartRef = doc(db, 'carts', uid);
-      const docSnap = await getDoc(cartRef);
-      const remoteItems = docSnap.exists() ? docSnap.data().items || [] : [];
-      const localItems = getLocalCart();
+      try {
+        const cartRef = doc(db, 'carts', uid);
+        const docSnap = await getDoc(cartRef);
+        const remoteItems = docSnap.exists() ? docSnap.data().items || [] : [];
+        const localItems = getLocalCart();
 
-      // Merge and write back to Firestore
-      const merged = mergeCarts(localItems, remoteItems);
-      await setDoc(cartRef, { items: merged }, { merge: true });
-      dispatch({ type: 'SET_ITEMS', payload: merged });
-      localStorage.removeItem(CART_STORAGE_KEY);
-
-      // Subscribe to Firestore changes
-      unsubscribe = onSnapshot(cartRef, (snap) => {
-        if (snap.exists()) {
-          const updated = snap.data().items || [];
-          dispatch({ type: 'SET_ITEMS', payload: updated });
+        let finalItems;
+        if (localItems.length > 0) {
+          // লোকাল কার্টে কিছু থাকলে মার্জ করে ওভাররাইট
+          finalItems = mergeCarts(localItems, remoteItems);
+          await setDoc(cartRef, { items: finalItems }); // overwrite
+        } else {
+          // লোকাল খালি থাকলে শুধুমাত্র রিমোট কার্ট দেখাবে
+          finalItems = remoteItems;
         }
-      });
+
+        dispatch({ type: 'SET_ITEMS', payload: finalItems });
+        localStorage.removeItem(CART_STORAGE_KEY);
+
+        // সাবস্ক্রাইব, যাতে পরবর্তী যেকোনো পরিবর্তন রিয়েলটাইমে আসে
+        unsubscribe = onSnapshot(cartRef, (snap) => {
+          if (snap.exists()) {
+            const updated = snap.data().items || [];
+            dispatch({ type: 'SET_ITEMS', payload: updated });
+          }
+        });
+      } catch (err) {
+        console.error('Error syncing cart on login:', err);
+        // কোনো সমস্যা হলে লোকাল কার্ট দেখান
+        loadLocal();
+      } finally {
+        setCartLoading(false);
+        initialLoadDone.current = true; // initial load শেষ
+      }
     };
 
     if (user) {
-      loadRemote(user.uid).catch((err) =>
-        console.error('Error syncing cart on login:', err)
-      );
+      loadRemote(user.uid);
     } else {
       loadLocal();
     }
@@ -134,23 +166,31 @@ export const CartProvider = ({ children }) => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user, loading]);
+  }, [user, authLoading]);
 
+  // ——————————————
+  // 2) cartItems পরিবর্তন হলে Firestore বা LocalStorage-এ রাইট
+  //    (শুধুমাত্র initial load সম্পন্ন হলে)
+  // ——————————————
   useEffect(() => {
-    if (loading) return;
+    // যতক্ষণ পর্যন্ত auth লোড হচ্ছে বা initial load শেষ হয়নি, অপেক্ষা করুন
+    if (authLoading || !initialLoadDone.current) return;
 
     if (user) {
+      // ইউজার লগইন করে থাকলে Firestore-এ overwrite
       const cartRef = doc(db, 'carts', user.uid);
-      setDoc(cartRef, { items: cartItems }, { merge: true }).catch((err) =>
+      setDoc(cartRef, { items: cartItems }).catch((err) =>
         console.error('Error updating Firestore cart:', err)
       );
     } else {
+      // গেস্ট ইউজার → LocalStorage
       saveLocalCart(cartItems);
     }
-  }, [cartItems, user, loading]);
+  }, [cartItems, user, authLoading]);
 
-  // ——— Action creators ———
-
+  // ——————————————
+  // Action Creators
+  // ——————————————
   const addItem = (item) =>
     dispatch({ type: 'ADD_ITEM', payload: item });
 
@@ -160,7 +200,8 @@ export const CartProvider = ({ children }) => {
   const updateQuantity = (Id, newQty) =>
     dispatch({ type: 'UPDATE_ITEM', payload: { Id, quantity: newQty } });
 
-  const clearCart = () => dispatch({ type: 'SET_ITEMS', payload: [] });
+  const clearCart = () =>
+    dispatch({ type: 'SET_ITEMS', payload: [] });
 
   return (
     <CartContext.Provider
@@ -170,14 +211,13 @@ export const CartProvider = ({ children }) => {
         removeItem,
         updateQuantity,
         clearCart,
+        cartLoading,
       }}
     >
       {children}
     </CartContext.Provider>
   );
 };
-
-// —————— Convenience hook: useCart ——————
 
 export const useCart = () => useContext(CartContext);
 
