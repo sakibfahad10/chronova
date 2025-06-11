@@ -21,7 +21,7 @@ const ManageProducts = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // রিয়েলটাইম সাবস্ক্রাইব
+// Real-time subscribe
   useEffect(() => {
     const unsubscribe = subscribeToProducts((items) => {
       setProducts(items);
@@ -30,13 +30,13 @@ const ManageProducts = () => {
     return () => unsubscribe();
   }, []);
 
-  // ফর্ম ইনপুট হ্যান্ডলার
+  // Form input handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // নতুন পণ্য যোগ
+  // Add new product
   const handleCreate = async () => {
     setSaving(true);
     const newProduct = {
@@ -56,7 +56,7 @@ const ManageProducts = () => {
     setSaving(false);
   };
 
-  // সম্পাদনা শুরু
+  // Start editing
   const startEdit = (prod) => {
     setEditingId(prod.id);
     setFormData({
@@ -67,7 +67,7 @@ const ManageProducts = () => {
     });
   };
 
-  // পণ্য আপডেট
+ // Update product
   const handleUpdate = async () => {
     setSaving(true);
     const updatedFields = {
@@ -75,7 +75,7 @@ const ManageProducts = () => {
       price: parseFloat(formData.price),
       description: formData.description,
       imageUrl: formData.imageUrl,
-      // updatedAt: auto আপডেট হবে
+  // updatedAt: will auto update
     };
     try {
       await updateProduct(editingId, updatedFields);
@@ -87,7 +87,7 @@ const ManageProducts = () => {
     setSaving(false);
   };
 
-  // পণ্য মুছুন
+ // Delete product
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure to delete this product?')) {
       try {

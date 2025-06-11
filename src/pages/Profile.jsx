@@ -9,143 +9,128 @@ import { useNavigate } from 'react-router-dom';
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [additionalInfo, setAdditionalInfo] = useState(null);
+  const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch additional profile information from Firestore (e.g., profile collection)
   useEffect(() => {
     if (!user) return;
-
-    const fetchProfileData = async () => {
+    const fetchProfile = async () => {
       try {
-        const profileRef = doc(db, 'profiles', user.uid);
-        const snap = await getDoc(profileRef);
-        if (snap.exists()) {
-          setAdditionalInfo(snap.data());
-        }
+        const snap = await getDoc(doc(db, 'profiles', user.uid));
+        if (snap.exists()) setInfo(snap.data());
       } catch (err) {
-        console.error('Error fetching additional profile info:', err);
+        console.error('Profile load error:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchProfileData();
+    fetchProfile();
   }, [user]);
 
   if (!user) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <p className="text-gray-600">Please log in to view your profile.</p>
+      <div className="min-h-[70vh] flex items-center justify-center px-4">
+        <p className="text-gray-600 text-lg text-center">
+          Please log in to view your profile.
+        </p>
       </div>
     );
   }
 
-  const creationTime = user.metadata?.creationTime
+  const created = user.metadata?.creationTime
     ? new Date(user.metadata.creationTime).toLocaleDateString()
     : 'N/A';
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+    await logout();
+    navigate('/login');
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-6">
-      <div className="bg-white shadow-lg rounded-lg p-8">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+    <section className="bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row items-center md:items-start p-6 md:p-8">
           {/* Avatar */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
             {user.photoURL ? (
               <img
                 src={user.photoURL}
-                alt="Profile Avatar"
-                className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+                alt="Avatar"
+                className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
               />
             ) : (
-              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-2xl font-bold">
-                {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-3xl font-bold">
+                {user.displayName
+                  ? user.displayName.charAt(0).toUpperCase()
+                  : user.email.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
 
-          {/* Basic Info */}
-          <div className="flex-1">
-            <h2 className="text-3xl font-semibold text-gray-800">
+          {/* User Info */}
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
               {user.displayName || user.email.split('@')[0]}
-            </h2>
+            </h1>
             <p className="text-gray-600 mt-1">{user.email}</p>
-            <p className="text-gray-500 mt-2 text-sm">Member since: {creationTime}</p>
-
-            {/* Edit Profile Button */}
+            <p className="text-gray-500 mt-2 text-sm">
+              Member since: {created}
+            </p>
             <button
               onClick={() => navigate('/profile/edit')}
-              className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+              className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
             >
               Edit Profile
             </button>
           </div>
         </div>
 
-        {/* Divider */}
-        <hr className="my-8 border-gray-200" />
+        <hr />
 
-        {/* Additional Information: e.g., Address, Contact, Orders */}
-        <div className="space-y-6">
-          {/* Address & Contact */}
+        {/* Contact & Orders */}
+        <div className="px-6 py-4 space-y-6">
+          {/* Contact Information */}
           <div>
-            <h3 className="text-xl font-medium text-gray-700">Contact Information</h3>
+            <h2 className="text-xl font-medium text-gray-700">
+              Contact Information
+            </h2>
             {loading ? (
               <p className="text-gray-500 mt-2">Loading...</p>
-            ) : additionalInfo && (additionalInfo.phone || additionalInfo.address) ? (
-              <div className="mt-2 space-y-1">
-                {additionalInfo.phone && (
-                  <p className="text-gray-600">
-                    <span className="text-gray-500">Phone:</span> {additionalInfo.phone}
-                  </p>
-                )}
-                {additionalInfo.address && (
-                  <p className="text-gray-600">
-                    <span className="text-gray-500">Address:</span> {additionalInfo.address}
-                  </p>
-                )}
-              </div>
+            ) : info?.phone || info?.address ? (
+              <ul className="mt-2 space-y-1 text-gray-600">
+                {info.phone && <li>📞 {info.phone}</li>}
+                {info.address && <li>🏠 {info.address}</li>}
+              </ul>
             ) : (
-              <p className="text-gray-500 mt-2">No additional contact info provided.</p>
+              <p className="text-gray-500 mt-2">
+                No additional contact info provided.
+              </p>
             )}
           </div>
 
-          {/* Recent Orders (Placeholder) */}
+          {/* Recent Orders */}
           <div>
-            <h3 className="text-xl font-medium text-gray-700">Recent Orders</h3>
-            <p className="text-gray-500 mt-2">
-              You have not placed any orders yet.
-            </p>
-            {/* 
-              If you have an Orders collection, you can map through the latest orders here:
-              additionalOrders.map(order => (...))
-            */}
+            <h2 className="text-xl font-medium text-gray-700">
+              Recent Orders
+            </h2>
+            <p className="text-gray-500 mt-2">You have no recent orders.</p>
           </div>
         </div>
 
-        {/* Divider */}
-        <hr className="my-8 border-gray-200" />
+        <hr />
 
-        {/* Account Actions */}
-        <div className="flex justify-end space-x-4">
+        {/* Logout */}
+        <div className="p-6 flex justify-center">
           <button
             onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+            className="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
           >
             Logout
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

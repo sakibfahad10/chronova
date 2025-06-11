@@ -1,128 +1,163 @@
-// src/pages/Cart.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 const Cart = () => {
   const { cartItems, removeItem, updateQuantity, cartLoading } = useCart();
+  const [showSummary, setShowSummary] = useState(false);
 
   if (cartLoading) {
-    return <p className="text-center mt-20">Loading cart…</p>;
+    return <p className="text-center mt-20 text-gray-600">Loading cart…</p>;
   }
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 100 ? 0 : 10;
   const tax = subtotal * 0.05;
   const total = subtotal + shipping + tax;
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-4xl font-bold mb-10 text-gray-800">
-        Shopping Cart
-      </h1>
+    <div className="relative bg-gray-50 min-h-screen pb-24">
+      <div className="max-w-6xl mx-auto px-4 py-8 lg:pr-[21rem]">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">Shopping Cart</h1>
 
-      {cartItems.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-xl">Your cart is empty.</p>
-          <Link
-            to="/shop"
-            className="mt-6 inline-block px-8 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 transition"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-6">
-            {cartItems.map((item) => (
-              <div
-                key={item.Id}
-                className="flex items-center justify-between bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition"
-              >
-                <div className="flex items-center gap-5">
+        {/* Empty state */}
+        {cartItems.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            <p className="text-xl mb-4">Your cart is empty.</p>
+            <Link
+              to="/shop"
+              className="inline-block px-6 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Mobile summary toggle */}
+            <button
+              className="md:hidden w-full flex justify-between items-center bg-white p-4 rounded-lg shadow mb-4"
+              onClick={() => setShowSummary(!showSummary)}
+            >
+              <span className="font-medium text-gray-800 flex items-center gap-2">
+                Order Summary
+                {showSummary ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </span>
+              <span className="text-gray-600 font-semibold">${total.toFixed(2)}</span>
+            </button>
+
+            {/* Mobile summary panel */}
+            {showSummary && (
+              <div className="md:hidden bg-white rounded-lg shadow mb-6 p-4">
+                <p className="text-sm text-gray-500 mb-2">Includes subtotal, shipping, tax</p>
+                <div className="space-y-3 text-gray-700 text-sm">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (5%)</span>
+                    <span>${tax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold pt-2 border-t">
+                    <span>Total</span>
+                    <span>${total.toFixed(2)}</span>
+                  </div>
+                  <Link
+                    to="/checkout"
+                    className="block mt-4 text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition"
+                  >
+                    Proceed to Checkout
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Cart items list */}
+            <div className="space-y-5">
+              {cartItems.map((item) => (
+                <div
+                  key={item.Id}
+                  className="flex flex-col sm:flex-row items-center bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition"
+                >
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-28 h-28 object-cover rounded-lg border"
+                    className="w-full sm:w-28 h-28 object-cover rounded-lg mb-4 sm:mb-0 sm:mr-6"
                   />
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-800">
-                      {item.name}
-                    </h2>
-                    <div className="flex items-center gap-3 mt-3">
+                  <div className="flex-1 w-full">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-1">{item.name}</h2>
+                    <p className="text-gray-600 mb-2 sm:mb-4">
+                      Price: <span className="font-medium text-gray-800">${item.price.toFixed(2)}</span>
+                    </p>
+                    <div className="flex items-center space-x-3 mb-4">
                       <button
-                        onClick={() =>
-                          updateQuantity(item.Id, item.quantity - 1)
-                        }
-                        className="p-1 border rounded text-gray-600 hover:bg-gray-100"
+                        onClick={() => updateQuantity(item.Id, item.quantity - 1)}
+                        className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                       >
                         <Minus size={16} />
                       </button>
-                      <span className="px-3 text-sm font-medium">
-                        {item.quantity}
-                      </span>
+                      <span className="text-gray-800 font-medium">{item.quantity}</span>
                       <button
-                        onClick={() =>
-                          updateQuantity(item.Id, item.quantity + 1)
-                        }
-                        className="p-1 border rounded text-gray-600 hover:bg-gray-100"
+                        onClick={() => updateQuantity(item.Id, item.quantity + 1)}
+                        className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
-                    <p className="mt-2 text-gray-700 font-semibold">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-gray-800 font-semibold">
+                        Total: ${(item.price * item.quantity).toFixed(2)}
+                      </p>
+                      <button
+                        onClick={() => removeItem(item.Id)}
+                        className="text-red-500 hover:text-red-600 transition"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => removeItem(item.Id)}
-                  className="text-red-500 hover:text-red-600"
-                  title="Remove item"
-                >
-                  <Trash2 size={22} />
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Order Summary */}
-          <div className="bg-white rounded-xl shadow-md p-6 h-fit sticky top-24">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">
-              Order Summary
-            </h2>
-            <div className="space-y-4 text-sm text-gray-700">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Estimated Shipping</span>
-                <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Estimated Tax (5%)</span>
-                <span>${tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-4 font-bold text-base">
-                <span>Grand Total</span>
-                <span>${total.toFixed(2)}</span>
+            {/* Desktop summary */}
+            <div className="hidden lg:block lg:fixed lg:top-24 lg:right-4 lg:w-80">
+              <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+                <h2 className="text-xl font-bold text-gray-800">Order Summary</h2>
+                <div className="text-gray-700 text-sm space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (5%)</span>
+                    <span>${tax.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span>${total.toFixed(2)}</span>
+                  </div>
+                </div>
+                <Link
+                  to="/checkout"
+                  className="block text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition"
+                >
+                  Proceed to Checkout
+                </Link>
               </div>
             </div>
-            <Link
-              to="/checkout"
-              className="mt-6 block text-center w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition"
-            >
-              Proceed to Checkout
-            </Link>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

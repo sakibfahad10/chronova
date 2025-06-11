@@ -4,19 +4,15 @@ import { useAuth } from './AuthContext';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
-
-  // যদি অথেনটিকেশন স্টেট এখনও লোড হয়, তাহলে একটা লোডিং মেসেজ দেখাও
+  // If authentication state is still loading, show a loading message
   if (loading) {
     return <div>Loading...</div>;
   }
-
-  // যদি ইউজার লগইন না থাকে, তাহলে লগইন পেজে রিডাইরেক্ট করো
+// If user is not logged in, redirect to login page
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
-  // ইউজার লগইন থাকলে, চাইল্ড কম্পোনেন্টগুলো দেখাও (যেমন Checkout)
+  // If user is logged in, show the child components (like Checkout)
   return children;
 };
-
 export default PrivateRoute;

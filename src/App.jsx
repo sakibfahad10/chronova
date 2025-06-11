@@ -15,11 +15,12 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile.jsx';
 
 import PrivateRoute from './context/PrivateRoute';
-import AdminRoute from './context/AdminRoute';            // ↑ নতুন রুট গার্ড
+import AdminRoute from './context/AdminRoute';           
 
-import ManageProducts from './pages/admin/ManageProducts'; // অ্যাডমিনের UI
+import ManageProducts from './pages/admin/ManageProducts'; // Admin UI
 
 function App() {
   return (
@@ -41,7 +42,7 @@ function App() {
         {/* Cart – public */}
         <Route path="/cart" element={<CartPage />} />
 
-        {/* Checkout – লগইন করে যা যাবে */}
+      {/* Checkout – accessible after login */}
         <Route
           path="/checkout"
           element={
@@ -51,7 +52,7 @@ function App() {
           }
         />
 
-        {/* Profile – লগইন করা লাগবে */}
+        {/* Profile – login required */}
         <Route
           path="/profile"
           element={
@@ -61,7 +62,7 @@ function App() {
           }
         />
 
-        {/* Admin-only routes: পণ্য ম্যানেজমেন্ট */}
+        {/* Admin-only routes: product management */}
         <Route
           path="/admin/products"
           element={
@@ -70,6 +71,15 @@ function App() {
             </AdminRoute>
           }
         />
+        {/* routes : profile edit */}
+        <Route
+        path="/profile/edit"
+         element={
+           <PrivateRoute>
+             <EditProfile />
+           </PrivateRoute>
+         }
+       />
       </Routes>
     </>
   );

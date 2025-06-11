@@ -4,7 +4,12 @@ import React, { useState, useContext } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  collection,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { db } from '../firebase';
 
 const Checkout = () => {
@@ -20,15 +25,18 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Calculate order summary
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Order summary
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const shipping = subtotal > 100 ? 0 : 10;
   const tax = parseFloat((subtotal * 0.05).toFixed(2));
   const total = parseFloat((subtotal + shipping + tax).toFixed(2));
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -41,34 +49,46 @@ const Checkout = () => {
     setError(null);
 
     try {
-      // Create a new order document in Firestore
+      // 1) Save order in Firestore
       const ordersCol = collection(db, 'orders');
+      const orderRef = doc(ordersCol);
       const orderData = {
-        customer: formData,                     // name, phone, address
+        customer: formData,
         items: cartItems,
         summary: { subtotal, shipping, tax, total },
-        customerId: user.uid,                   // required for security rules
+        customerId: user.uid,
         createdAt: serverTimestamp(),
       };
+      await setDoc(orderRef, orderData);
 
-      // Write to Firestore
-      const newOrderRef = doc(ordersCol);
-      await setDoc(newOrderRef, orderData);
+      // 2) Initiate payment via SSLCOMMERZ backend
+      const response = await fetch('/api/payment/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: orderRef.id,
+          ...orderData
+        }),
+      });
+      const data = await response.json();
 
-      // Clear local and remote cart
-      clearCart();
-
-      // Redirect to success page
-      navigate('/success');
+      if (response.ok && data.paymentUrl) {
+        // Clear cart locally
+        clearCart();
+        // Redirect to payment gateway
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error(data.error || 'Payment initiation failed');
+      }
     } catch (err) {
-      console.error('Error saving order to Firestore:', err);
-      setError('Unable to place order. Please try again.');
+      console.error('Checkout error:', err);
+      setError(err.message);
       setLoading(false);
     }
   };
 
   if (cartLoading) {
-    return <p className="text-center mt-20 text-gray-600">Loading cart…</p>;
+    return <p className="text-center mt-20">Loading cart…</p>;
   }
 
   if (!cartItems.length) {
@@ -90,61 +110,56 @@ const Checkout = () => {
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Checkout</h1>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-800 rounded">
-          {error}
-        </div>
+        <div className="mb-6 p-4 bg-red-100 text-red-800 rounded">{error}</div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Billing & Shipping Form */}
         <div className="bg-white shadow rounded-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">Billing & Shipping Details</h2>
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">
+            Billing & Shipping Details
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1">
                 Full Name
               </label>
               <input
-                id="name"
                 name="name"
-                type="text"
                 value={formData.name}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1">
                 Phone Number
               </label>
               <input
-                id="phone"
                 name="phone"
-                type="tel"
                 value={formData.phone}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1">
                 Shipping Address
               </label>
               <textarea
-                id="address"
                 name="address"
                 rows="4"
                 value={formData.address}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              ></textarea>
+                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              />
             </div>
 
             <button
@@ -154,18 +169,23 @@ const Checkout = () => {
                 loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
               } transition`}
             >
-              {loading ? 'Placing Order…' : 'Place Order'}
+              {loading ? 'Processing…' : 'Proceed to Payment'}
             </button>
           </form>
         </div>
 
         {/* Order Summary */}
         <div className="bg-white shadow rounded-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">Order Summary</h2>
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">
+            Order Summary
+          </h2>
 
           <div className="space-y-4">
             {cartItems.map((item) => (
-              <div key={item.Id} className="flex items-center justify-between border-b pb-4">
+              <div
+                key={item.Id}
+                className="flex items-center justify-between border-b pb-4"
+              >
                 <div className="flex items-center gap-4">
                   <img
                     src={item.image}
@@ -216,9 +236,3 @@ const Checkout = () => {
 };
 
 export default Checkout;
-
-
-
-
-
-

@@ -99,14 +99,17 @@ export const CartProvider = ({ children }) => {
   const [cartItems, dispatch] = useReducer(cartReducer, []);
   const [cartLoading, setCartLoading] = useState(true);
 
-  // এই রেফ ফ্ল্যাগ ইঙ্গিত দেবে initial load সম্পন্ন হয়েছে কিনা
+  // This ref flag will indicate if the initial load is done or not
+
   const initialLoadDone = useRef(false);
 
   // ——————————————
-  // 1) Auth state পরিবর্তন হলে বা লোডিং শেষ হলে কার্ট লোডিং
+  // 1) When auth state changes or loading is done, load the cart
+
   // ——————————————
   useEffect(() => {
-    // প্রত্যেকবার authState পরিবর্তনের শুরুতেই রিসেট
+    // Reset at the start of every authState change
+
     initialLoadDone.current = false;
 
     if (authLoading) return;
@@ -117,7 +120,7 @@ export const CartProvider = ({ children }) => {
       const local = getLocalCart();
       dispatch({ type: 'INITIALIZE', payload: local });
       setCartLoading(false);
-      initialLoadDone.current = true; // initial load শেষ
+      initialLoadDone.current = true; // initial load end
     };
 
     const loadRemote = async (uid) => {
@@ -129,18 +132,21 @@ export const CartProvider = ({ children }) => {
 
         let finalItems;
         if (localItems.length > 0) {
-          // লোকাল কার্টে কিছু থাকলে মার্জ করে ওভাররাইট
+          // If there is something in the local cart, merge and overwrite
+
           finalItems = mergeCarts(localItems, remoteItems);
           await setDoc(cartRef, { items: finalItems }); // overwrite
         } else {
-          // লোকাল খালি থাকলে শুধুমাত্র রিমোট কার্ট দেখাবে
+          // If local is empty, show only the remote cart
+
           finalItems = remoteItems;
         }
 
         dispatch({ type: 'SET_ITEMS', payload: finalItems });
         localStorage.removeItem(CART_STORAGE_KEY);
 
-        // সাবস্ক্রাইব, যাতে পরবর্তী যেকোনো পরিবর্তন রিয়েলটাইমে আসে
+        // Subscribe to get any future changes in real-time
+
         unsubscribe = onSnapshot(cartRef, (snap) => {
           if (snap.exists()) {
             const updated = snap.data().items || [];
@@ -149,11 +155,12 @@ export const CartProvider = ({ children }) => {
         });
       } catch (err) {
         console.error('Error syncing cart on login:', err);
-        // কোনো সমস্যা হলে লোকাল কার্ট দেখান
+        // If there is any problem, show the local cart
+
         loadLocal();
       } finally {
         setCartLoading(false);
-        initialLoadDone.current = true; // initial load শেষ
+        initialLoadDone.current = true; // initial load end
       }
     };
 
@@ -169,21 +176,23 @@ export const CartProvider = ({ children }) => {
   }, [user, authLoading]);
 
   // ——————————————
-  // 2) cartItems পরিবর্তন হলে Firestore বা LocalStorage-এ রাইট
-  //    (শুধুমাত্র initial load সম্পন্ন হলে)
+  // 2) When cartItems change, write to Firestore or LocalStorage
+  //    (only after the initial load is complete)
   // ——————————————
   useEffect(() => {
-    // যতক্ষণ পর্যন্ত auth লোড হচ্ছে বা initial load শেষ হয়নি, অপেক্ষা করুন
+    // Wait until auth is loading or the initial load is not finished
+
     if (authLoading || !initialLoadDone.current) return;
 
     if (user) {
-      // ইউজার লগইন করে থাকলে Firestore-এ overwrite
+      // If user is logged in, overwrite in Firestore
       const cartRef = doc(db, 'carts', user.uid);
       setDoc(cartRef, { items: cartItems }).catch((err) =>
         console.error('Error updating Firestore cart:', err)
       );
     } else {
-      // গেস্ট ইউজার → LocalStorage
+      // Guest user → LocalStorage
+
       saveLocalCart(cartItems);
     }
   }, [cartItems, user, authLoading]);

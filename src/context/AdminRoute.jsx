@@ -12,16 +12,19 @@ const AdminRoute = ({ children }) => {
   }
 
   if (!user) {
-    // গেস্ট বা অবটেন্টিকেটেড ইউজার → লগইনপেজে নিয়ে যাবে
+   // Guest or unauthenticated user → will be redirected to the login page
+
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (!isAdmin) {
-    // লগইন করা কিন্তু অ্যাডমিন না → Forbidden বা হোমে ফেরত
+   // Logged in but not admin → redirect to Forbidden or Home
+
     return <Navigate to="/" replace />;
   }
 
-  // অবশেষে অ্যাডমিন হলে UI দেখাবে
+ // Finally, if admin → will display the UI
+
   return children;
 };
 
