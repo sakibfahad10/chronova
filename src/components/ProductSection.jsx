@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ProductCard from './ProductCard';
 import { subscribeToProducts } from '../services/productService';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const skeletonArray = [1, 2, 3];
+const skeletonArray = [1, 2, 3, 4, 5, 6];
 
 const ProductSection = () => {
   const [products, setProducts] = useState([]);
@@ -12,7 +11,7 @@ const ProductSection = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeToProducts((items) => {
-      setProducts(items.slice(0, 3)); // first 3
+      setProducts(items.slice(0, 6)); // first 6 for grid
       setLoading(false);
     });
     return () => unsubscribe();
@@ -35,43 +34,34 @@ const ProductSection = () => {
       </header>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-4">
           {skeletonArray.map((i) => (
             <div
               key={i}
-              className="animate-pulse bg-gray-200 rounded-lg h-80"
+              className="animate-pulse bg-gray-200 rounded-lg h-40"
             />
           ))}
         </div>
       ) : (
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+          className="grid grid-cols-3 gap-4"
           initial="hidden"
           animate="visible"
           variants={{
             hidden: {},
-            visible: { transition: { staggerChildren: 0.2 } }
+            visible: { transition: { staggerChildren: 0.1 } }
           }}
         >
           {products.map((watch) => (
             <motion.div
               key={watch.id}
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
             >
               <ProductCard watch={watch} />
             </motion.div>
           ))}
         </motion.div>
       )}
-
-      <div className="text-center mt-12">
-        <Link
-          to="/shop"
-          className="inline-block px-8 py-3 bg-black text-white font-medium rounded-lg shadow-lg hover:bg-gray-800 transition ease-in-out duration-200"
-        >
-          View All Watches
-        </Link>
-      </div>
     </section>
   );
 };

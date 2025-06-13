@@ -1,3 +1,4 @@
+// src/pages/Cart.jsx
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
@@ -17,24 +18,23 @@ const Cart = () => {
   const total = subtotal + shipping + tax;
 
   return (
-    <div className="relative bg-gray-50 min-h-screen pb-24">
-      <div className="max-w-6xl mx-auto px-4 py-8 lg:pr-[21rem]">
+    <div className="bg-gray-50 min-h-screen pb-24 pt-8">
+      <div className="max-w-6xl mx-auto px-4 lg:pr-[21rem] lg:pl-4"> {/* Left shift for desktop */}
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Shopping Cart</h1>
 
-        {/* Empty state */}
         {cartItems.length === 0 ? (
           <div className="text-center py-20 text-gray-500">
             <p className="text-xl mb-4">Your cart is empty.</p>
             <Link
               to="/shop"
-              className="inline-block px-6 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition"
+              className="inline-block px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition"
             >
               Continue Shopping
             </Link>
           </div>
         ) : (
           <>
-            {/* Mobile summary toggle */}
+            {/* Mobile Summary Toggle */}
             <button
               className="md:hidden w-full flex justify-between items-center bg-white p-4 rounded-lg shadow mb-4"
               onClick={() => setShowSummary(!showSummary)}
@@ -46,10 +46,10 @@ const Cart = () => {
               <span className="text-gray-600 font-semibold">${total.toFixed(2)}</span>
             </button>
 
-            {/* Mobile summary panel */}
+            {/* Mobile Summary Panel */}
             {showSummary && (
               <div className="md:hidden bg-white rounded-lg shadow mb-6 p-4">
-                <p className="text-sm text-gray-500 mb-2">Includes subtotal, shipping, tax</p>
+                <p className="text-sm text-gray-500 mb-2">Includes subtotal, shipping & tax</p>
                 <div className="space-y-3 text-gray-700 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
@@ -77,42 +77,44 @@ const Cart = () => {
               </div>
             )}
 
-            {/* Cart items list */}
+            {/* Cart Items */}
             <div className="space-y-5">
               {cartItems.map((item) => (
                 <div
                   key={item.Id}
-                  className="flex flex-col sm:flex-row items-center bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition"
+                  className="flex items-center bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition"
                 >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full sm:w-28 h-28 object-cover rounded-lg mb-4 sm:mb-0 sm:mr-6"
-                  />
-                  <div className="flex-1 w-full">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-1">{item.name}</h2>
-                    <p className="text-gray-600 mb-2 sm:mb-4">
-                      Price: <span className="font-medium text-gray-800">${item.price.toFixed(2)}</span>
+                  {/* Image */}
+                  <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Mobile Design */}
+                  <div className="ml-4 flex-1 w-full sm:hidden">
+                    <h2 className="text-base font-semibold text-gray-800 mb-1 line-clamp-2">{item.name}</h2>
+                    <p className="text-gray-600 text-sm mb-2">
+                      ${item.price.toFixed(2)} x {item.quantity}
                     </p>
-                    <div className="flex items-center space-x-3 mb-4">
-                      <button
-                        onClick={() => updateQuantity(item.Id, item.quantity - 1)}
-                        className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="text-gray-800 font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.Id, item.quantity + 1)}
-                        className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
                     <div className="flex justify-between items-center">
-                      <p className="text-gray-800 font-semibold">
-                        Total: ${(item.price * item.quantity).toFixed(2)}
-                      </p>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => updateQuantity(item.Id, Math.max(item.quantity - 1, 1))}
+                          className="p-1 bg-gray-100 rounded hover:bg-gray-200 transition"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="text-gray-800 font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.Id, item.quantity + 1)}
+                          className="p-1 bg-gray-100 rounded hover:bg-gray-200 transition"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                       <button
                         onClick={() => removeItem(item.Id)}
                         className="text-red-500 hover:text-red-600 transition"
@@ -121,11 +123,49 @@ const Cart = () => {
                       </button>
                     </div>
                   </div>
+
+                  {/* Desktop Design */}
+                  <div className="hidden sm:flex flex-1 sm:ml-6 flex-col justify-between w-full">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-800 mb-1">{item.name}</h2>
+                      <p className="text-gray-600 mb-2">
+                        Price: <span className="font-medium text-gray-800">${item.price.toFixed(2)}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => updateQuantity(item.Id, Math.max(item.quantity - 1, 1))}
+                          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="text-gray-800 font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.Id, item.quantity + 1)}
+                          className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <p className="text-gray-800 font-semibold">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </p>
+                        <button
+                          onClick={() => removeItem(item.Id)}
+                          className="text-red-500 hover:text-red-600 transition"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Desktop summary */}
+            {/* Desktop Summary */}
             <div className="hidden lg:block lg:fixed lg:top-24 lg:right-4 lg:w-80">
               <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">Order Summary</h2>

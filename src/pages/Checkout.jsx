@@ -1,16 +1,9 @@
 // src/pages/Checkout.jsx
-
 import React, { useState, useContext } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-import {
-  doc,
-  setDoc,
-  collection,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { Minus, Plus, Trash2 } from 'lucide-react';
 
 const Checkout = () => {
   const { user } = useAuth();
@@ -25,18 +18,15 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Order summary
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  // Calculate order summary
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 100 ? 0 : 10;
   const tax = parseFloat((subtotal * 0.05).toFixed(2));
   const total = parseFloat((subtotal + shipping + tax).toFixed(2));
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((p) => ({ ...p, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -49,36 +39,31 @@ const Checkout = () => {
     setError(null);
 
     try {
-      // 1) Save order in Firestore
-      const ordersCol = collection(db, 'orders');
-      const orderRef = doc(ordersCol);
+      // 1) Prepare payload
       const orderData = {
-        customer: formData,
+        customer: {
+          ...formData,
+          email: user.email
+        },
         items: cartItems,
         summary: { subtotal, shipping, tax, total },
         customerId: user.uid,
-        createdAt: serverTimestamp(),
       };
-      await setDoc(orderRef, orderData);
 
-      // 2) Initiate payment via SSLCOMMERZ backend
-      const response = await fetch('/api/payment/initiate', {
+      // 2) Call your Express backend
+      const response = await fetch('http://localhost:4000/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: orderRef.id,
-          ...orderData
-        }),
+        body: JSON.stringify(orderData),
       });
       const data = await response.json();
 
       if (response.ok && data.paymentUrl) {
-        // Clear cart locally
+        // 3) Clear cart locally and redirect
         clearCart();
-        // Redirect to payment gateway
         window.location.href = data.paymentUrl;
       } else {
-        throw new Error(data.error || 'Payment initiation failed');
+        throw new Error(data.error || 'Payment initiation failed.');
       }
     } catch (err) {
       console.error('Checkout error:', err);
@@ -88,7 +73,7 @@ const Checkout = () => {
   };
 
   if (cartLoading) {
-    return <p className="text-center mt-20">Loading cart…</p>;
+    return <p className="text-center mt-20 text-gray-600">Loading cart…</p>;
   }
 
   if (!cartItems.length) {
@@ -110,58 +95,61 @@ const Checkout = () => {
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Checkout</h1>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-800 rounded">{error}</div>
+        <div className="mb-6 p-4 bg-red-100 text-red-800 rounded">
+          {error}
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Billing & Shipping Form */}
         <div className="bg-white shadow rounded-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">
-            Billing & Shipping Details
-          </h2>
-
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">Billing & Shipping Details</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-600 mb-1">
                 Full Name
               </label>
               <input
+                id="name"
                 name="name"
+                type="text"
                 value={formData.name}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-600 mb-1">
                 Phone Number
               </label>
               <input
+                id="phone"
                 name="phone"
+                type="tel"
                 value={formData.phone}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label htmlFor="address" className="block text-sm font-medium text-gray-600 mb-1">
                 Shipping Address
               </label>
               <textarea
+                id="address"
                 name="address"
                 rows="4"
                 value={formData.address}
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              ></textarea>
             </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -176,16 +164,10 @@ const Checkout = () => {
 
         {/* Order Summary */}
         <div className="bg-white shadow rounded-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-6">
-            Order Summary
-          </h2>
-
+          <h2 className="text-2xl font-semibold text-gray-700 mb-6">Order Summary</h2>
           <div className="space-y-4">
             {cartItems.map((item) => (
-              <div
-                key={item.Id}
-                className="flex items-center justify-between border-b pb-4"
-              >
+              <div key={item.Id} className="flex items-center justify-between border-b pb-4">
                 <div className="flex items-center gap-4">
                   <img
                     src={item.image}
@@ -202,7 +184,6 @@ const Checkout = () => {
                 </p>
               </div>
             ))}
-
             <div className="pt-4">
               <div className="flex justify-between text-gray-600 mb-2">
                 <span>Subtotal</span>
@@ -221,10 +202,9 @@ const Checkout = () => {
                 <span>${total.toFixed(2)}</span>
               </div>
             </div>
-
             <button
               onClick={() => clearCart()}
-              className="w-full mt-6 py-2 text-center text-sm text-red-600 hover:text-red-800 transition"
+              className="w-full mt-6 py-2 text-center text-sm text-red-600 hover:text-red-800 transition border-1"
             >
               Clear Cart
             </button>

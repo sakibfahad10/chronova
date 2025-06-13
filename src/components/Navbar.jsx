@@ -216,7 +216,7 @@ const Navbar = () => {
 
             {!user && (
               <div className="pt-2 border-t border-gray-200">
-                <Link to="/login" onClick={() => setMobileOpen(false)} className="block py-2 font-medium text-blue-600 hover:underline">Login</Link>
+                <Link to="/login" onClick={() => setMobileOpen(false)} className="block py-2 font-medium text-blue-900 hover:underline">Login</Link>
                 <Link to="/register" onClick={() => setMobileOpen(false)} className="block py-2 font-medium text-gray-700 hover:underline">Register</Link>
               </div>
             )}
