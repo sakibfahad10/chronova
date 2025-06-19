@@ -11,7 +11,7 @@ const ProductSection = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeToProducts((items) => {
-      setProducts(items.slice(0, 6)); // first 6 for grid
+      setProducts(items.slice(0,5)); // first 6 for grid
       setLoading(false);
     });
     return () => unsubscribe();

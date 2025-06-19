@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx';
 import Shop from './pages/Shop.jsx';
 import About from './pages/About.jsx';
 import Navbar from './components/Navbar.jsx';
+import Footer from './components/Footer';
 import ProductDetails from './pages/ProductDetails';
 import CartPage from './pages/Cart';
 import Success from './pages/Success';
@@ -17,8 +18,24 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Profile from './pages/Profile';
 import EditProfile from './pages/EditProfile.jsx';
 
+// Footer Pages (moved under pages/footerPages)
+import WhyChronova from './pages/footerPages/WhyChronova.jsx';
+import OurProcess from './pages/footerPages/OurProcess.jsx';
+import RefundPolicy from './pages/footerPages/RefundPolicy.jsx';
+import TermsAndConditions from './pages/footerPages/TermsAndConditions.jsx';
+import WarrantyPolicy from './pages/footerPages/WarrantyPolicy.jsx';
+import Ewaste from './pages/footerPages/Ewaste.jsx';
+
+// Help & E-waste Detail Pages now also under footerPages
+import RegisterToSell from './pages/footerPages/RegisterToSell.jsx';
+import SellerPortal from './pages/footerPages/SellerPortal.jsx';
+import SupportArea from './pages/footerPages/SupportArea.jsx';
+import EnvironmentalImpact from './pages/footerPages/EnvironmentalImpact.jsx';
+import ResponsibleTreatment from './pages/footerPages/ResponsibleTreatment.jsx';
+import HowYouCanHelp from './pages/footerPages/HowYouCanHelp.jsx';
+
 import PrivateRoute from './context/PrivateRoute';
-import AdminRoute from './context/AdminRoute';           
+import AdminRoute from './context/AdminRoute';  
 
 import ManageProducts from './pages/admin/ManageProducts'; // Admin UI
 
@@ -39,10 +56,28 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
 
-        {/* Cart – public */}
+        {/* Footer Pages */}
+        <Route path="/why-chronova" element={<WhyChronova />} />
+        <Route path="/our-process" element={<OurProcess />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/warranty-policy" element={<WarrantyPolicy />} />
+        <Route path="/ewaste" element={<Ewaste />} />
+
+        {/* Help Pages */}
+        <Route path="/register-to-sell" element={<RegisterToSell />} />
+        <Route path="/seller-portal" element={<SellerPortal />} />
+        <Route path="/support" element={<SupportArea />} />
+
+        {/* E-waste Detail Pages */}
+        <Route path="/ewaste/impact" element={<EnvironmentalImpact />} />
+        <Route path="/ewaste/treatment" element={<ResponsibleTreatment />} />
+        <Route path="/ewaste/help" element={<HowYouCanHelp />} />
+
+        {/* Cart */}
         <Route path="/cart" element={<CartPage />} />
 
-      {/* Checkout – accessible after login */}
+        {/* Checkout */}
         <Route
           path="/checkout"
           element={
@@ -52,7 +87,7 @@ function App() {
           }
         />
 
-        {/* Profile – login required */}
+        {/* Profile */}
         <Route
           path="/profile"
           element={
@@ -61,8 +96,16 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/profile/edit"
+          element={
+            <PrivateRoute>
+              <EditProfile />
+            </PrivateRoute>
+          }
+        />
 
-        {/* Admin-only routes: product management */}
+        {/* Admin */}
         <Route
           path="/admin/products"
           element={
@@ -71,16 +114,8 @@ function App() {
             </AdminRoute>
           }
         />
-        {/* routes : profile edit */}
-        <Route
-        path="/profile/edit"
-         element={
-           <PrivateRoute>
-             <EditProfile />
-           </PrivateRoute>
-         }
-       />
       </Routes>
+      <Footer />
     </>
   );
 }
